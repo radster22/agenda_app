@@ -1,7 +1,7 @@
 let state = loadState();
 
-const mainEl = document.getElementById("main-list");
 const membersEl = document.getElementById("members");
+const searchEl = document.getElementById("search");
 
 function commit() {
   saveState(state);
@@ -13,7 +13,6 @@ function findList(id) {
 }
 
 function cardHtml(list) {
-  const isMain = list.id === MAIN_ID;
   const done = list.items.filter((i) => i.done).length;
   const items = list.items.length
     ? list.items.map((item) => `
@@ -25,17 +24,17 @@ function cardHtml(list) {
     : `<li class="empty">No agendas yet.</li>`;
 
   return `
-    <section class="card ${isMain ? "main-card" : ""}" data-list="${list.id}">
+    <section class="card" data-list="${list.id}">
       <div class="card-head">
-        ${isMain ? "" : `<span class="avatar" style="background:${colorFor(list.id)}">${escapeHtml(initials(list.name))}</span>`}
+        <span class="avatar" style="background:${colorFor(list.id)}">${escapeHtml(initials(list.name))}</span>
         <span class="title">${escapeHtml(list.name)}</span>
         <span class="count">${done}/${list.items.length}</span>
         <button class="btn-icon" data-action="refresh" title="Move struck-off agendas to the Bin" ${done ? "" : "disabled"}>⟳ Refresh</button>
-        ${isMain ? "" : `<button class="btn-icon" data-action="remove-member" title="Remove member">✕</button>`}
+        <button class="btn-icon" data-action="remove-member" title="Remove member">✕</button>
       </div>
       <div class="card-body">
         <form class="row" data-action="add-item">
-          <input type="text" name="text" placeholder="Add an agenda…" autocomplete="off" required>
+          <input type="text" name="text" placeholder="Add an agenda for ${escapeHtml(list.name)}…" autocomplete="off" required>
           <button type="submit">Add</button>
         </form>
         <ul class="items">${items}</ul>
@@ -44,16 +43,21 @@ function cardHtml(list) {
 }
 
 function render() {
-  const main = findList(MAIN_ID);
-  mainEl.innerHTML = cardHtml(main);
-  const members = state.lists.filter((l) => l.id !== MAIN_ID);
-  membersEl.innerHTML = members.length
-    ? members.map(cardHtml).join("")
-    : `<p class="empty">No team members yet — add one above.</p>`;
+  const q = searchEl.value.trim().toLowerCase();
+  const shown = state.lists.filter((l) => l.name.toLowerCase().includes(q));
+  if (!state.lists.length) {
+    membersEl.innerHTML = `<p class="empty">No team members yet — add one above to start adding agendas.</p>`;
+  } else if (!shown.length) {
+    membersEl.innerHTML = `<p class="empty">No team member matches “${escapeHtml(searchEl.value.trim())}”.</p>`;
+  } else {
+    membersEl.innerHTML = shown.map(cardHtml).join("");
+  }
   updateBinBadge(state);
 }
 
 // ---------- Event handling (delegated) ----------
+searchEl.addEventListener("input", render);
+
 document.addEventListener("submit", (e) => {
   const form = e.target;
   if (form.id === "add-member-form") {
@@ -122,4 +126,5 @@ window.addEventListener("storage", (e) => {
   if (e.key === STORE_KEY) { state = loadState(); render(); }
 });
 
+setupThemeToggle();
 render();

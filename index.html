@@ -1,22 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agenda</title>
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem("agenda-theme") || "dark"; } catch {}</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="index.html">Agenda</a>
+    <input type="search" id="search" class="search" placeholder="Search team members…" autocomplete="off" aria-label="Search team members">
     <nav class="nav">
+      <button id="theme-toggle" type="button"></button>
       <a class="btn" href="bin.html" title="View removed agendas">🗑 Bin <span class="badge" id="bin-count"></span></a>
     </nav>
   </header>
 
   <main>
-    <div id="main-list"></div>
-
     <div class="section-head">
       <h2>Team</h2>
       <form class="row add-member" id="add-member-form">
@@ -24,7 +25,7 @@
         <button class="btn-primary" type="submit">Add member</button>
       </form>
     </div>
-    <div class="grid" id="members"></div>
+    <div class="stack" id="members"></div>
   </main>
 
   <script src="store.js"></script>

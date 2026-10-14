@@ -1,6 +1,23 @@
-:root {
+:root,
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #0d0d0f;
+  --field: #000000;
+  --ink: #ececee;
+  --muted: #8e939a;
+  --line: #26282c;
+  --accent: #7b93ff;
+  --accent-ink: #0a0a0c;
+  --danger: #ff6b6b;
+  --done: #5f646b;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
   --bg: #f6f5f1;
   --surface: #ffffff;
+  --field: #f6f5f1;
   --ink: #1f2328;
   --muted: #6b6f76;
   --line: #e4e2dc;
@@ -9,21 +26,7 @@
   --danger: #c92a2a;
   --done: #9aa0a6;
   --shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 4px 14px rgba(0, 0, 0, .04);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15171a;
-    --surface: #1e2125;
-    --ink: #e8e9eb;
-    --muted: #9aa0a6;
-    --line: #2f3338;
-    --accent: #7b93ff;
-    --accent-ink: #0f1115;
-    --danger: #ff6b6b;
-    --done: #6b7077;
-    --shadow: none;
-  }
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -50,8 +53,10 @@ body {
 }
 .brand { font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
 .nav { display: flex; gap: 8px; }
+.search { flex: 0 1 420px; }
+button:disabled { opacity: .4; cursor: default; }
 
-main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+main { max-width: 860px; margin: 0 auto; padding: 24px; }
 
 /* ---------- Buttons & inputs ---------- */
 button, .btn {
@@ -85,17 +90,17 @@ button:hover, .btn:hover { border-color: var(--muted); }
 }
 .badge:empty, .badge[data-count="0"] { display: none; }
 
-input[type="text"] {
+input[type="text"], input[type="search"] {
   font: inherit;
   color: var(--ink);
-  background: var(--bg);
+  background: var(--field);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 10px;
   flex: 1;
   min-width: 0;
 }
-input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input[type="text"]:focus, input[type="search"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
 .row { display: flex; gap: 8px; }
 
@@ -114,11 +119,12 @@ input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1p
 .add-member { max-width: 420px; width: 100%; }
 
 /* ---------- Notebook cards ---------- */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+.stack {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
+
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -127,7 +133,6 @@ input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1p
   display: flex;
   flex-direction: column;
 }
-.card.main-card { margin-bottom: 32px; }
 .card-head {
   display: flex;
   align-items: center;
@@ -176,6 +181,8 @@ input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1p
 
 @media (max-width: 640px) {
   .topbar, main { padding-left: 16px; padding-right: 16px; }
+  .topbar { flex-wrap: wrap; }
+  .search { order: 3; flex: 1 1 100%; }
   .bin-table th:nth-child(3), .bin-table td:nth-child(3) { display: none; }
   .item .del { visibility: visible; }
 }

@@ -1,15 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agenda Bin</title>
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem("agenda-theme") || "dark"; } catch {}</script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="index.html">Agenda</a>
     <nav class="nav">
+      <button id="theme-toggle" type="button"></button>
       <a class="btn" href="index.html">← Back to agendas</a>
     </nav>
   </header>
@@ -79,8 +81,12 @@
       const id = btn.closest("tr").dataset.id;
       const entry = state.bin.find((b) => b.id === id);
       if (btn.dataset.action === "restore") {
-        // Restore to the original owner; fall back to the main list if that member was removed
-        const list = state.lists.find((l) => l.id === entry.ownerId) || state.lists.find((l) => l.id === MAIN_ID);
+        // Restore to the original owner; re-create that member if they were removed
+        let list = state.lists.find((l) => l.id === entry.ownerId);
+        if (!list) {
+          list = { id: entry.ownerId, name: entry.owner, items: [] };
+          state.lists.push(list);
+        }
         list.items.push({ id: entry.id, text: entry.text, done: false, created: entry.created });
       }
       state.bin = state.bin.filter((b) => b.id !== id);
@@ -97,6 +103,7 @@
       if (e.key === STORE_KEY) { state = loadState(); render(); }
     });
 
+    setupThemeToggle();
     render();
   </script>
 </body>
