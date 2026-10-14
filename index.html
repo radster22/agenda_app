@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">Agenda</a>
+    <nav class="nav">
+      <a class="btn" href="bin.html" title="View removed agendas">🗑 Bin <span class="badge" id="bin-count"></span></a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="main-list"></div>
+
+    <div class="section-head">
+      <h2>Team</h2>
+      <form class="row add-member" id="add-member-form">
+        <input type="text" id="member-name" placeholder="Add team member…" autocomplete="off" required>
+        <button class="btn-primary" type="submit">Add member</button>
+      </form>
+    </div>
+    <div class="grid" id="members"></div>
+  </main>
+
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

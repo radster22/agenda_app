@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda Bin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">Agenda</a>
+    <nav class="nav">
+      <a class="btn" href="index.html">← Back to agendas</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="section-head">
+      <h1>🗑 Bin</h1>
+      <button class="btn-danger" id="empty-bin">Empty bin</button>
+    </div>
+    <div class="bin-filter" id="filters"></div>
+    <div id="bin"></div>
+  </main>
+
+  <script src="store.js"></script>
+  <script>
+    let state = loadState();
+    let filter = "all";
+
+    const binEl = document.getElementById("bin");
+    const filtersEl = document.getElementById("filters");
+    const emptyBtn = document.getElementById("empty-bin");
+
+    function fmt(ts) {
+      return new Date(ts).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    }
+
+    function render() {
+      const owners = [...new Map(state.bin.map((b) => [b.ownerId, b.owner])).entries()];
+      if (filter !== "all" && !owners.some(([id]) => id === filter)) filter = "all";
+
+      filtersEl.innerHTML = owners.length > 1
+        ? [["all", "All"], ...owners].map(([id, name]) =>
+            `<button class="chip ${filter === id ? "active" : ""}" data-filter="${id}">${escapeHtml(name)}</button>`).join("")
+        : "";
+
+      const rows = state.bin.filter((b) => filter === "all" || b.ownerId === filter);
+      emptyBtn.disabled = state.bin.length === 0;
+
+      binEl.innerHTML = rows.length
+        ? `<table class="bin-table">
+            <thead><tr><th>Agenda</th><th>Owner</th><th>Removed</th><th></th></tr></thead>
+            <tbody>${rows.map((b) => `
+              <tr data-id="${b.id}">
+                <td class="text">${escapeHtml(b.text)}</td>
+                <td>${escapeHtml(b.owner)}</td>
+                <td>${fmt(b.binned)}</td>
+                <td class="actions">
+                  <button class="btn-icon" data-action="restore" title="Restore to its list">↺ Restore</button>
+                  <button class="btn-icon" data-action="purge" title="Delete forever">✕</button>
+                </td>
+              </tr>`).join("")}
+            </tbody>
+          </table>`
+        : `<p class="empty">The bin is empty. Struck-off agendas land here when you press Refresh on a list.</p>`;
+    }
+
+    function commit() { saveState(state); render(); }
+
+    filtersEl.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-filter]");
+      if (chip) { filter = chip.dataset.filter; render(); }
+    });
+
+    binEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-action]");
+      if (!btn) return;
+      const id = btn.closest("tr").dataset.id;
+      const entry = state.bin.find((b) => b.id === id);
+      if (btn.dataset.action === "restore") {
+        // Restore to the original owner; fall back to the main list if that member was removed
+        const list = state.lists.find((l) => l.id === entry.ownerId) || state.lists.find((l) => l.id === MAIN_ID);
+        list.items.push({ id: entry.id, text: entry.text, done: false, created: entry.created });
+      }
+      state.bin = state.bin.filter((b) => b.id !== id);
+      commit();
+    });
+
+    emptyBtn.addEventListener("click", () => {
+      if (!confirm(`Permanently delete ${state.bin.length} agenda(s)?`)) return;
+      state.bin = [];
+      commit();
+    });
+
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORE_KEY) { state = loadState(); render(); }
+    });
+
+    render();
+  </script>
+</body>
+</html>
