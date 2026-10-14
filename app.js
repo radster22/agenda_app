@@ -1,21 +1,11 @@
-let state = loadState();
-
 const membersEl = document.getElementById("members");
 const searchEl = document.getElementById("search");
 
-function commit() {
-  saveState(state);
-  render();
-}
-
-function findList(id) {
-  return state.lists.find((l) => l.id === id);
-}
-
-function cardHtml(list) {
-  const done = list.items.filter((i) => i.done).length;
-  const items = list.items.length
-    ? list.items.map((item) => `
+function cardHtml(member) {
+  const list = activeItems(member.id);
+  const done = list.filter((i) => i.done).length;
+  const items = list.length
+    ? list.map((item) => `
         <li class="item ${item.done ? "done" : ""}" data-item="${item.id}">
           <input type="checkbox" data-action="toggle" ${item.done ? "checked" : ""} aria-label="Strike off">
           <span class="text">${escapeHtml(item.text)}</span>
@@ -24,17 +14,17 @@ function cardHtml(list) {
     : `<li class="empty">No agendas yet.</li>`;
 
   return `
-    <section class="card" data-list="${list.id}">
+    <section class="card" data-list="${member.id}">
       <div class="card-head">
-        <span class="avatar" style="background:${colorFor(list.id)}">${escapeHtml(initials(list.name))}</span>
-        <span class="title">${escapeHtml(list.name)}</span>
-        <span class="count">${done}/${list.items.length}</span>
+        <span class="avatar" style="background:${colorFor(member.id)}">${escapeHtml(initials(member.name))}</span>
+        <span class="title">${escapeHtml(member.name)}</span>
+        <span class="count">${done}/${list.length}</span>
         <button class="btn-icon" data-action="refresh" title="Move struck-off agendas to the Bin" ${done ? "" : "disabled"}>⟳ Refresh</button>
         <button class="btn-icon" data-action="remove-member" title="Remove member">✕</button>
       </div>
       <div class="card-body">
         <form class="row" data-action="add-item">
-          <input type="text" name="text" placeholder="Add an agenda for ${escapeHtml(list.name)}…" autocomplete="off" required>
+          <input type="text" name="text" placeholder="Add an agenda for ${escapeHtml(member.name)}…" autocomplete="off" required>
           <button type="submit">Add</button>
         </form>
         <ul class="items">${items}</ul>
@@ -43,16 +33,32 @@ function cardHtml(list) {
 }
 
 function render() {
+  // Re-rendering replaces the cards, so carry over half-typed agendas and focus
+  const drafts = {};
+  membersEl.querySelectorAll("[data-list]").forEach((card) => {
+    drafts[card.dataset.list] = card.querySelector('input[name="text"]').value;
+  });
+  const active = document.activeElement;
+  const focusedList = active?.name === "text" ? active.closest("[data-list]")?.dataset.list : null;
+
   const q = searchEl.value.trim().toLowerCase();
-  const shown = state.lists.filter((l) => l.name.toLowerCase().includes(q));
-  if (!state.lists.length) {
+  const shown = data.members.filter((m) => m.name.toLowerCase().includes(q));
+  if (!db) {
+    membersEl.innerHTML = "";
+  } else if (!data.members.length) {
     membersEl.innerHTML = `<p class="empty">No team members yet — add one above to start adding agendas.</p>`;
   } else if (!shown.length) {
     membersEl.innerHTML = `<p class="empty">No team member matches “${escapeHtml(searchEl.value.trim())}”.</p>`;
   } else {
     membersEl.innerHTML = shown.map(cardHtml).join("");
   }
-  updateBinBadge(state);
+
+  for (const [id, value] of Object.entries(drafts)) {
+    const input = membersEl.querySelector(`[data-list="${id}"] input[name="text"]`);
+    if (input) input.value = value;
+  }
+  if (focusedList) membersEl.querySelector(`[data-list="${focusedList}"] input[name="text"]`)?.focus();
+  updateBinBadge();
 }
 
 // ---------- Event handling (delegated) ----------
@@ -64,67 +70,45 @@ document.addEventListener("submit", (e) => {
     e.preventDefault();
     const input = document.getElementById("member-name");
     const name = input.value.trim();
-    if (!name) return;
-    state.lists.push({ id: uid(), name, items: [] });
+    if (!name || !db) return;
     input.value = "";
-    commit();
+    actions.addMember(name);
     return;
   }
   if (form.dataset.action === "add-item") {
     e.preventDefault();
-    const listId = form.closest("[data-list]").dataset.list;
     const text = form.elements.text.value.trim();
     if (!text) return;
-    findList(listId).items.push({ id: uid(), text, done: false, created: Date.now() });
-    commit();
-    // keep focus in the same input for fast entry
-    document.querySelector(`[data-list="${listId}"] input[name="text"]`)?.focus();
+    form.elements.text.value = "";
+    actions.addAgenda(Number(form.closest("[data-list]").dataset.list), text);
   }
 });
 
 document.addEventListener("change", (e) => {
   if (e.target.dataset.action !== "toggle") return;
-  const list = findList(e.target.closest("[data-list]").dataset.list);
-  const item = list.items.find((i) => i.id === e.target.closest("[data-item]").dataset.item);
-  item.done = e.target.checked;
-  commit();
+  actions.setDone(Number(e.target.closest("[data-item]").dataset.item), e.target.checked);
 });
 
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
-  const card = btn.closest("[data-list]");
+  const card = btn?.closest("[data-list]");
   if (!card) return;
-  const list = findList(card.dataset.list);
+  const member = data.members.find((m) => m.id === Number(card.dataset.list));
 
   switch (btn.dataset.action) {
-    case "refresh": {
-      const struck = list.items.filter((i) => i.done);
-      const now = Date.now();
-      state.bin.unshift(...struck.map((i) => ({ ...i, owner: list.name, ownerId: list.id, binned: now })));
-      list.items = list.items.filter((i) => !i.done);
-      commit();
+    case "refresh":
+      actions.refresh(member.id);
       break;
-    }
-    case "delete-item": {
-      const itemId = btn.closest("[data-item]").dataset.item;
-      list.items = list.items.filter((i) => i.id !== itemId);
-      commit();
+    case "delete-item":
+      actions.deleteAgenda(Number(btn.closest("[data-item]").dataset.item));
       break;
-    }
-    case "remove-member": {
-      if (!confirm(`Remove ${list.name} and their agendas? Struck-off items already in the Bin are kept.`)) return;
-      state.lists = state.lists.filter((l) => l.id !== list.id);
-      commit();
+    case "remove-member":
+      if (confirm(`Remove ${member.name} and all their agendas, including any in the Bin?`)) {
+        actions.removeMember(member.id);
+      }
       break;
-    }
   }
 });
 
-// Keep multiple tabs in sync
-window.addEventListener("storage", (e) => {
-  if (e.key === STORE_KEY) { state = loadState(); render(); }
-});
-
 setupThemeToggle();
-render();
+connect(render).then((ok) => ok && offerLegacyImport());

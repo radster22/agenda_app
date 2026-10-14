@@ -186,3 +186,14 @@ input[type="text"]:focus, input[type="search"]:focus { outline: 2px solid var(--
   .bin-table th:nth-child(3), .bin-table td:nth-child(3) { display: none; }
   .item .del { visibility: visible; }
 }
+
+/* ---------- Status line ---------- */
+.status {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.status.error { color: var(--danger); border-color: var(--danger); }
